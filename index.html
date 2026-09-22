@@ -1,0 +1,907 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kelime Avı Oluşturucu</title>
+
+    <!-- PDF Kütüphanesi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+      :root {
+        --primary-color: #2c3e50;
+        --secondary-color: #34495e;
+        --accent-color: #3498db;
+        --success-color: #27ae60;
+        --danger-color: #e74c3c;
+        --bg-color: #ecf0f1;
+        --card-bg: #ffffff;
+        --text-color: #333333;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+      }
+
+      .container {
+        background-color: var(--card-bg);
+        width: 100%;
+        max-width: 600px;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        text-align: center;
+        color: var(--primary-color);
+        margin-bottom: 25px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 8px;
+        color: var(--secondary-color);
+      }
+
+      select,
+      input[type="text"] {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #bdc3c7;
+        border-radius: 6px;
+        font-size: 16px;
+        box-sizing: border-box;
+        outline: none;
+        transition: border-color 0.3s;
+      }
+
+      select:focus,
+      input[type="text"]:focus {
+        border-color: var(--accent-color);
+      }
+
+      .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      button {
+        padding: 12px 20px;
+        border: none;
+        border-radius: 6px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition:
+          background-color 0.3s,
+          opacity 0.3s;
+        color: white;
+      }
+
+      button:hover {
+        opacity: 0.9;
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .btn-add {
+        background-color: var(--success-color);
+        flex: 1;
+      }
+      .btn-random {
+        background-color: var(--accent-color);
+        flex: 2;
+      }
+      .btn-generate {
+        background-color: var(--primary-color);
+        width: 100%;
+        margin-top: 30px;
+        font-size: 18px;
+        padding: 15px;
+      }
+
+      .word-list-container {
+        margin-top: 20px;
+        padding: 15px;
+        border: 1px dashed #bdc3c7;
+        border-radius: 6px;
+        min-height: 80px;
+      }
+
+      .word-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .word-tag {
+        background-color: var(--bg-color);
+        border: 1px solid #bdc3c7;
+        padding: 8px 15px;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: bold;
+      }
+
+      .word-tag span {
+        color: var(--danger-color);
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 18px;
+        line-height: 1;
+      }
+
+      .word-count-info {
+        font-size: 14px;
+        color: #7f8c8d;
+        margin-bottom: 10px;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Kelime Avı Oluşturucu</h1>
+
+      <div class="form-group">
+        <label for="difficulty">Zorluk Seviyesi ve Izgara Boyutu</label>
+        <select id="difficulty">
+          <option value="10">Kolay - 10x10 (Maksimum 5 Kelime)</option>
+          <option value="12">Orta - 12x12 (Maksimum 8 Kelime)</option>
+          <option value="14">Zor - 14x14 (Maksimum 11 Kelime)</option>
+          <option value="15" selected>Çok Zor - 15x15 (Maksimum 14 Kelime)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="wordInput">Kelime Ekle</label>
+        <input
+          type="text"
+          id="wordInput"
+          placeholder="Örn: SOBA"
+          autocomplete="off"
+          oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"
+        />
+        <div class="button-group">
+          <button class="btn-add" id="btnAdd">Ekle</button>
+          <button class="btn-random" id="btnRandom">Eksik Yerleri Rastgele Doldur</button>
+        </div>
+      </div>
+
+      <div class="word-list-container">
+        <span class="word-count-info">Eklenen Kelimeler (0/14)</span>
+        <div class="word-list" id="wordList"></div>
+      </div>
+
+      <button class="btn-generate" id="btnGenerate">Bulmacayı Oluştur ve PDF İndir</button>
+    </div>
+
+    <!-- PDF Olarak Basılacak Gizli Şablon -->
+    <div id="pdfContainer" style="display: none; position: absolute; left: -9999px; top: -9999px">
+      <div
+        id="pdfContent"
+        style="
+          width: 190mm;
+          margin: 0 auto;
+          padding: 20px 10px;
+          font-family: sans-serif;
+          background-color: white;
+          color: black;
+          box-sizing: border-box;
+        "
+      >
+        <!-- 1. Sayfa: Oyun -->
+        <h1 style="text-align: center; font-size: 32px; text-transform: uppercase">KELİME AVI</h1>
+        <div id="puzzleGrid" style="margin: 30px auto; display: table; border-collapse: collapse"></div>
+
+        <h3 style="margin-top: 40px; font-size: 22px; text-align: center">Bulunacak Kelimeler:</h3>
+        <div
+          id="puzzleWords"
+          style="
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 15px;
+            width: 100%;
+            box-sizing: border-box;
+          "
+        ></div>
+
+        <div class="html2pdf__page-break"></div>
+
+        <!-- 2. Sayfa: Çözüm Anahtarı -->
+        <h1 style="text-align: center; font-size: 32px; margin-top: 40px">ÇÖZÜM ANAHTARI</h1>
+        <div id="solutionGrid" style="margin: 30px auto; display: table; border-collapse: collapse"></div>
+      </div>
+    </div>
+
+    <script>
+      let words = [];
+      let maxWords = 14;
+
+      const difficultySelect = document.getElementById("difficulty");
+      const wordInput = document.getElementById("wordInput");
+      const btnAdd = document.getElementById("btnAdd");
+      const btnRandom = document.getElementById("btnRandom");
+      const btnGenerate = document.getElementById("btnGenerate");
+      const wordListContainer = document.getElementById("wordList");
+      const wordCountInfo = document.querySelector(".word-count-info");
+
+      const positiveWordsPool = [
+        "AİLE",
+        "ANNE",
+        "BABA",
+        "EVLAT",
+        "TORUN",
+        "ÇOCUK",
+        "KARDEŞ",
+        "DOST",
+        "ARKADAŞ",
+        "KOMŞU",
+        "YAREN",
+        "AKRABA",
+        "GELİN",
+        "DAMAT",
+        "BEBEK",
+        "DEDE",
+        "NİNE",
+        "AMCA",
+        "HALA",
+        "DAYI",
+        "TEYZE",
+        "SOBA",
+        "RADYO",
+        "HALI",
+        "PERDE",
+        "MASAL",
+        "KİTAP",
+        "MASA",
+        "SANDALYE",
+        "YASTIK",
+        "YORGAN",
+        "BATTANİYE",
+        "SANDIK",
+        "DOLAP",
+        "LAMBA",
+        "KANDİL",
+        "SAAT",
+        "AYNA",
+        "TARAK",
+        "SABUN",
+        "HAVLU",
+        "ODA",
+        "KAPI",
+        "PENCERE",
+        "BALKON",
+        "BAHÇE",
+        "ÇİT",
+        "SEPET",
+        "IBRIK",
+        "TESTİ",
+        "GÜNEŞ",
+        "BAHAR",
+        "ÇİÇEK",
+        "AĞAÇ",
+        "YAPRAK",
+        "TOPRAK",
+        "SU",
+        "DENİZ",
+        "GÖL",
+        "NEHİR",
+        "IRMAK",
+        "DAĞ",
+        "YILDIZ",
+        "AY",
+        "BULUT",
+        "YAĞMUR",
+        "KAR",
+        "RÜZGAR",
+        "ESİNTİ",
+        "ÇİMEN",
+        "GÜL",
+        "PAPATYA",
+        "LALE",
+        "MENEKŞE",
+        "KIRLANGIÇ",
+        "SERÇE",
+        "KEDİ",
+        "KÖPEK",
+        "KUŞ",
+        "KOYUN",
+        "KUZU",
+        "İNEK",
+        "AT",
+        "TAVUK",
+        "HOROZ",
+        "ARI",
+        "BAL",
+        "SEVGİ",
+        "SAYGI",
+        "HUZUR",
+        "MUTLULUK",
+        "NEŞE",
+        "SEVİNÇ",
+        "UMUT",
+        "SABIR",
+        "GÜLÜŞ",
+        "ŞEFKAT",
+        "MERHAMET",
+        "İYİLİK",
+        "BAYRAM",
+        "DÜĞÜN",
+        "KINA",
+        "HATIRA",
+        "ANI",
+        "GEÇMİŞ",
+        "ZAMAN",
+        "SABAH",
+        "AKŞAM",
+        "ÖĞLE",
+        "GECE",
+        "GÜNDÜZ",
+        "YIL",
+        "HAFTA",
+        "GÜN",
+        "ÖMÜR",
+        "HAYAT",
+        "SAĞLIK",
+        "ŞİFA",
+        "KISMET",
+        "NASİP",
+        "BEREKET",
+        "RÜYA",
+        "HİKAYE",
+        "DESTAN",
+        "TÜRKÜ",
+        "ŞARKI",
+        "MÜZİK",
+        "EZGİ",
+        "NEFES",
+        "KAHVE",
+        "ÇAY",
+        "ŞEKER",
+        "LOKUM",
+        "REÇEL",
+        "EKMEK",
+        "ÇORBA",
+        "TENCERE",
+        "TAVA",
+        "KEPÇE",
+        "TABAK",
+        "BARDAK",
+        "KAŞIK",
+        "ÇATAL",
+        "BIÇAK",
+        "ET",
+        "BALIK",
+        "YUMURTA",
+        "PEYNİR",
+        "YOĞURT",
+        "SÜT",
+        "TEREYAĞ",
+        "ZEYTİN",
+        "DOMATES",
+        "BİBER",
+        "SALATALIK",
+        "PATATES",
+        "SOĞAN",
+        "SARIMSAK",
+        "ELMA",
+        "ARMUT",
+        "ÜZÜM",
+        "İNCİR",
+        "KAVUN",
+        "KARPUZ",
+        "PORTAKAL",
+        "LİMON",
+        "ERİK",
+        "KİRAZ",
+        "ŞEFTALİ",
+        "NAR",
+        "CEVİZ",
+        "FINDIK",
+        "BADEM",
+        "UN",
+        "BULGUR",
+        "PİRİNÇ",
+        "MERCİMEK",
+        "NOHUT",
+        "FASULYE",
+        "KÖPRÜ",
+        "YOL",
+        "ÇEŞME",
+        "DEĞİRMEN",
+        "HARMAN",
+        "TARLA",
+        "ÇİFTLİK",
+        "KÖY",
+        "KASABA",
+        "ŞEHİR",
+        "MAHALLE",
+        "SOKAK",
+        "ÇARŞI",
+        "PAZAR",
+        "DÜKKAN",
+        "ESNAF",
+        "USTA",
+        "ÇIRAK",
+        "SANAT",
+        "ZANAAT",
+        "DEFTER",
+        "KALEM",
+        "MEKTUP",
+        "ZARF",
+        "PUL",
+        "TELGRAF",
+        "FİTİL",
+        "GAZ",
+        "ODUN",
+        "KÖMÜR",
+        "ATEŞ",
+        "KÜL",
+        "DUMAN",
+        "BACA",
+        "KAYIK",
+        "GEMİ",
+        "TREN",
+        "VAPUR",
+        "ARABA",
+        "İSTASYON",
+        "DURAK",
+        "GÖNÜL",
+        "CAN",
+        "YÜREK",
+        "YOLDAŞ",
+        "YARDIM",
+        "MISRA",
+        "ŞİİR",
+        "GAZEL",
+        "MANİ",
+        "BİLMECE",
+        "NİNNİ",
+        "OYUN",
+        "EĞLENCE",
+        "ŞÖLEN",
+        "ZİYAFET",
+        "SOFRA",
+        "NİMET",
+        "ŞÜKÜR",
+        "DÜRÜST",
+        "NAMUS",
+        "ŞEREF",
+        "GURUR",
+        "ONUR",
+        "HAYIR",
+        "SEVAP",
+        "GÜNAH",
+        "TÖVBE",
+        "HAL",
+        "KEYİF",
+        "COŞKU",
+        "HEYECAN",
+        "ÖZLEM",
+        "HASRET",
+        "VUSLAT",
+        "KAVUŞMA",
+        "SARILMA",
+        "ÖPÜCÜK",
+        "TEBESSÜM",
+        "YAYLA",
+        "TEPE",
+        "VADİ",
+        "KÖRFEZ",
+        "ADACIK",
+        "SAHİL",
+        "KUM",
+        "ÇAKIL",
+        "TAŞ",
+        "KAYA",
+        "MADEN",
+        "DEMİR",
+        "BAKIR",
+        "ALTIN",
+        "GÜMÜŞ",
+        "ÇELİK",
+        "FIRIN",
+        "OCAK",
+        "TAVAN",
+        "TABAN",
+        "DUVAR",
+        "KİREMİT",
+        "KİLER",
+        "AMBAR",
+        "DEPO",
+        "KUYU",
+        "TULUMBA",
+        "KÜREK",
+        "KAZMA",
+        "TIRPAN",
+        "ORAK",
+        "DÜVEN",
+        "ÇUVAL",
+        "HEYBE",
+        "TORBA",
+        "KUTU",
+        "SANDIK",
+        "ŞİŞE",
+        "KAVANOZ",
+        "ÇANAK",
+        "ÇÖMLEK",
+        "KİRPİK",
+        "KAŞ",
+        "ALIN",
+        "YANAK",
+        "DUDAK",
+        "ÇENE",
+        "BOYUN",
+        "OMUZ",
+        "KOL",
+        "DİRSEK",
+        "BİLEK",
+        "EL",
+        "PARMAK",
+        "TIRNAK",
+        "GÖĞÜS",
+        "KALP",
+        "SIRT",
+        "BEL",
+        "DİZ",
+        "AYAK",
+        "TOPUK",
+        "BEDEN",
+        "CÜSSE",
+        "BOY",
+        "POS",
+        "VÜCUT",
+        "KAHRAMAN",
+        "MİSAFİR",
+        "KONUK",
+        "EVSAHİBİ",
+        "KOMŞULUK",
+        "DOSTLUK",
+        "AKRABALIK",
+        "BİRLİK",
+        "BERABERLİK",
+        "DAYANIŞMA",
+        "YARDIMLAŞMA",
+        "SEVİNÇ",
+        "BAŞARI",
+        "ZAFER",
+        "HUZURLU",
+        "MUTLU",
+        "NEŞELİ",
+        "UMUTLU",
+        "SAĞLAM",
+        "GÜVEN",
+        "İNANÇ",
+        "İMAN",
+        "KAVRAM",
+        "ANLAM",
+        "DEĞER",
+        "KIYMET",
+        "ÖNEM",
+        "ZENGİNLİK",
+        "BOLLUK",
+        "BEREKET",
+        "ŞÜKRAN",
+        "TEŞEKKÜR",
+        "SELAM",
+        "VEDA",
+        "SOHBET",
+        "MUHABBET",
+        "LAF",
+        "SÖZ",
+        "KELAM",
+        "DEYİM",
+        "ATASÖZÜ",
+        "FIKRA",
+        "HİKAYE",
+        "DESTAN",
+        "ŞİİR",
+        "KAYNAK",
+        "PINAR",
+        "GÖZ",
+        "ÇEŞME",
+        "ŞARILTI",
+        "HIRILTI",
+        "YEL",
+        "FIRTINA",
+        "BORA",
+        "KASIRGA",
+        "ŞİMŞEK",
+        "YILDIRIM",
+        "GÜRÜLTÜ",
+        "YAĞMUR",
+        "ÇİSE",
+        "DOLU",
+        "TİPİ",
+        "AYAZ",
+        "SOĞUK",
+        "SICAK",
+        "ILIK",
+        "SERİN",
+        "IŞIK",
+        "IŞILTI",
+        "PARILTI",
+        "AYDINLIK",
+        "KARANLIK",
+        "İKİNDİ",
+        "YATSI",
+        "ŞAFAK",
+        "TAN",
+        "SEHER",
+      ];
+
+      // Zorluk değiştiğinde kelimeleri sıfırla ve sınırları güncelle
+      difficultySelect.addEventListener("change", (e) => {
+        const size = parseInt(e.target.value);
+        if (size === 10) maxWords = 5;
+        else if (size === 12) maxWords = 8;
+        else if (size === 14) maxWords = 11;
+        else if (size === 15) maxWords = 14;
+
+        words = [];
+        updateUI();
+      });
+
+      btnAdd.addEventListener("click", () => addWord(wordInput.value));
+      wordInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") addWord(wordInput.value);
+      });
+
+      // Eksik yerleri havuzdan tekrar etmeden tek seferde doldurur
+      btnRandom.addEventListener("click", () => {
+        if (words.length >= maxWords) {
+          alert(`Maksimum ${maxWords} kelimeye ulaştınız!`);
+          return;
+        }
+
+        const currentGridSize = parseInt(difficultySelect.value);
+
+        // Boyuta uygun ve henüz eklenmemiş kelimeleri filtrele
+        let validPool = positiveWordsPool.filter((w) => w.length <= currentGridSize && !words.includes(w));
+
+        if (validPool.length === 0) {
+          alert("Bu boyuta uygun başka kelime kalmadı!");
+          return;
+        }
+
+        while (words.length < maxWords && validPool.length > 0) {
+          const randomIndex = Math.floor(Math.random() * validPool.length);
+          const selectedWord = validPool.splice(randomIndex, 1)[0];
+          words.push(selectedWord);
+        }
+
+        updateUI();
+      });
+
+      function addWord(word) {
+        word = word.trim().toLocaleUpperCase("tr-TR");
+        if (!word) return;
+        if (words.length >= maxWords) return alert(`Bu zorluk için maksimum ${maxWords} kelime ekleyebilirsiniz!`);
+        if (words.includes(word)) return alert("Bu kelime zaten eklendi!");
+
+        const currentGridSize = parseInt(difficultySelect.value);
+        if (word.length > currentGridSize)
+          return alert(`Kelime çok uzun! En fazla ${currentGridSize} harfli olabilir.`);
+        if (!/^[A-ZÇĞİIÖŞÜ]+$/.test(word)) return alert("Lütfen sadece harf kullanın.");
+
+        words.push(word);
+        wordInput.value = "";
+        updateUI();
+      }
+
+      function removeWord(index) {
+        words.splice(index, 1);
+        updateUI();
+      }
+
+      function updateUI() {
+        wordListContainer.innerHTML = "";
+        words.forEach((word, index) => {
+          const tag = document.createElement("div");
+          tag.className = "word-tag";
+          tag.innerHTML = `${word} <span onclick="removeWord(${index})">&times;</span>`;
+          wordListContainer.appendChild(tag);
+        });
+        wordCountInfo.textContent = `Eklenen Kelimeler (${words.length}/${maxWords})`;
+        wordCountInfo.style.color = words.length > maxWords ? "red" : "#7f8c8d";
+      }
+
+      function generatePuzzle(size, wordList) {
+        let grid = Array(size)
+          .fill(null)
+          .map(() => Array(size).fill(""));
+        let solutionGrid = Array(size)
+          .fill(null)
+          .map(() => Array(size).fill(""));
+        const alphabet = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ";
+        let placedWords = [];
+
+        let sortedWords = [...wordList].sort((a, b) => b.length - a.length);
+
+        for (let word of sortedWords) {
+          let placed = false;
+          let attempts = 0;
+
+          while (!placed && attempts < 2000) {
+            let direction = Math.floor(Math.random() * 2);
+            let row = Math.floor(Math.random() * size);
+            let col = Math.floor(Math.random() * size);
+            let canPlace = true;
+
+            if (direction === 0) {
+              if (col + word.length > size) {
+                canPlace = false;
+              } else {
+                for (let i = -1; i <= word.length; i++) {
+                  for (let rOffset = -1; rOffset <= 1; rOffset++) {
+                    let checkRow = row + rOffset;
+                    let checkCol = col + i;
+
+                    if (checkRow >= 0 && checkRow < size && checkCol >= 0 && checkCol < size) {
+                      if (grid[checkRow][checkCol] !== "") {
+                        canPlace = false;
+                        break;
+                      }
+                    }
+                  }
+                  if (!canPlace) break;
+                }
+              }
+            } else {
+              if (row + word.length > size) {
+                canPlace = false;
+              } else {
+                for (let i = -1; i <= word.length; i++) {
+                  for (let cOffset = -1; cOffset <= 1; cOffset++) {
+                    let checkRow = row + i;
+                    let checkCol = col + cOffset;
+
+                    if (checkRow >= 0 && checkRow < size && checkCol >= 0 && checkCol < size) {
+                      if (grid[checkRow][checkCol] !== "") {
+                        canPlace = false;
+                        break;
+                      }
+                    }
+                  }
+                  if (!canPlace) break;
+                }
+              }
+            }
+
+            if (canPlace) {
+              for (let i = 0; i < word.length; i++) {
+                if (direction === 0) {
+                  grid[row][col + i] = word[i];
+                  solutionGrid[row][col + i] = word[i];
+                } else {
+                  grid[row + i][col] = word[i];
+                  solutionGrid[row + i][col] = word[i];
+                }
+              }
+              placed = true;
+              placedWords.push(word);
+            }
+            attempts++;
+          }
+        }
+
+        for (let r = 0; r < size; r++) {
+          for (let c = 0; c < size; c++) {
+            if (grid[r][c] === "") {
+              grid[r][c] = alphabet[Math.floor(Math.random() * alphabet.length)];
+            }
+          }
+        }
+
+        return { grid, solutionGrid, placedWords };
+      }
+
+      function renderTable(dataGrid, isSolution) {
+        const size = dataGrid.length;
+        let cellSize = 38;
+        let fontSize = 20;
+
+        if (size === 10) {
+          cellSize = 52;
+          fontSize = 26;
+        } else if (size === 12) {
+          cellSize = 44;
+          fontSize = 22;
+        } else if (size === 14) {
+          cellSize = 38;
+          fontSize = 18;
+        } else if (size === 15) {
+          cellSize = 35;
+          fontSize = 16;
+        }
+
+        let html = '<table style="border-collapse: collapse; margin: 0 auto; border: 3px solid #333;">';
+        for (let r = 0; r < size; r++) {
+          html += "<tr>";
+          for (let c = 0; c < size; c++) {
+            let letter = dataGrid[r][c];
+            let displayLetter = isSolution && letter === "" ? "" : letter;
+            let bgColor = isSolution && letter !== "" ? "#e8f4f8" : "#ffffff";
+
+            html += `<td style="width: ${cellSize}px; height: ${cellSize}px; text-align: center; vertical-align: middle; 
+                             border: 1px solid #ccc; font-size: ${fontSize}px; font-weight: bold; background-color: ${bgColor};">
+                             ${displayLetter}</td>`;
+          }
+          html += "</tr>";
+        }
+        html += "</table>";
+        return html;
+      }
+
+      btnGenerate.addEventListener("click", () => {
+        if (words.length === 0) return alert("Lütfen PDF oluşturmadan önce kelime ekleyin.");
+
+        const size = parseInt(difficultySelect.value);
+        btnGenerate.textContent = "PDF Hazırlanıyor, Lütfen Bekleyin...";
+        btnGenerate.disabled = true;
+
+        const puzzleData = generatePuzzle(size, words);
+
+        document.getElementById("puzzleGrid").innerHTML = renderTable(puzzleData.grid, false);
+        document.getElementById("solutionGrid").innerHTML = renderTable(puzzleData.solutionGrid, true);
+
+        const wordsHtml = puzzleData.placedWords
+          .map(
+            (w) =>
+              `<span style="padding: 6px 12px; border: 2px solid #333; border-radius: 8px; background-color: #f8f9fa; white-space: nowrap;">${w}</span>`,
+          )
+          .join("");
+        document.getElementById("puzzleWords").innerHTML = wordsHtml;
+
+        const element = document.getElementById("pdfContent");
+        const container = document.getElementById("pdfContainer");
+
+        container.style.display = "block";
+
+        const opt = {
+          margin: 10,
+          filename: `kelime-avi-${size}x${size}.pdf`,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        };
+
+        html2pdf()
+          .set(opt)
+          .from(element)
+          .save()
+          .then(() => {
+            container.style.display = "none";
+            btnGenerate.textContent = "Bulmacayı Oluştur ve PDF İndir";
+            btnGenerate.disabled = false;
+          });
+      });
+
+      updateUI();
+    </script>
+  </body>
+</html>
