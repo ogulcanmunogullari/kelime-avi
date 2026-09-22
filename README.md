@@ -25,7 +25,3 @@ Bu proje, yapay zeka kullanılarak Alzheimer hastaları için özel olarak tasar
 3. Zorluk seviyesini seçin.
 4. Kendi kelimelerinizi girin veya "Eksik Yerleri Rastgele Doldur" butonunu kullanın.
 5. "Bulmacayı Oluştur ve PDF İndir" butonuna basarak çıktı alın.
-
-## GitHub Pages ile Yayınlama
-
-Projeyi GitHub deposuna yükledikten sonra `Settings > Pages` sekmesinden `main` dalını (branch) seçerek saniyeler içinde canlıya alabilirsiniz.
